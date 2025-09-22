@@ -18,13 +18,16 @@ This repository implements a lightweight retrieval-augmented generation (RAG) sy
    * **SimpleRAGNodes**: A direct pipeline where retrieved chunks are concatenated with the user’s query and passed to an LLM for answer synthesis.
    * **ReActNode**: A hybrid pipeline that first attempts retrieval from the local vector store and, in cases where the local documents provide insufficient evidence, falls back to an external knowledge source (Wikipedia). The Wikipedia integration is mediated by a ReAct-style agent built with LangGraph, allowing iterative reasoning and tool use.
 
-4. **Summarization**
+4. **Graph-based pipeline (LangGraph)**
+   The repository includes a `GraphBuilder` that constructs a **LangGraph StateGraph** pipeline. This allows modular definition of retrieval and response generation nodes with explicit state management.
+
+5. **Summarization**
    To prevent verbose outputs, both pipelines incorporate summarization prompts that constrain the generated response to two or three sentences that directly answer the query.
 
-5. **Frontend**
+6. **Frontend**
    A Streamlit-based application provides an interface for uploading documents, managing vector stores, and posing natural language queries.
 
-6. **Persistence**
+7. **Persistence**
    Vector stores can be saved locally to enable repeated querying without reprocessing the entire corpus.
 
 ---
@@ -98,6 +101,7 @@ streamlit run streamlit_app.py
 
    * In **SimpleRAGNodes**, retrieved chunks are combined with the query into a prompt. The LLM then produces an answer grounded in the local corpus.
    * In **ReActNode**, the system first attempts the same retrieval. If relevant documents are available, they are summarized. If not, a ReAct agent is constructed with access to a Wikipedia search tool. This agent performs tool-augmented reasoning and generates an answer by combining reasoning steps and external content.
+   * In **GraphBuilder**, a LangGraph `StateGraph` is defined. The graph includes nodes like `responder`, where the retrieval and response generation happen, with explicit entry and exit points.
 
 4. **Summarization**
    Both nodes employ summarization prompts, ensuring responses are concise and directly address the user’s question. If retrieved or external content exceeds a length threshold, an additional summarization pass is invoked.
@@ -115,6 +119,7 @@ from src.vector_store.vector_store import VectorStore
 from src.nodes.nodes import SimpleRAGNodes
 from src.nodes.react_node import RAGNodes
 from src.state.rag_state import RAGState
+from src.graph_builder.graph_builder import GraphBuilder
 
 # Ingest documents
 processor = DocumentProcessor()
@@ -135,6 +140,12 @@ print("SimpleRAG answer:", result_simple["answer"])
 react_nodes = RAGNodes(retriever, llm)
 result_react = react_nodes.generate_answer(state)
 print("ReAct answer:", result_react["answer"])
+
+# Graph pipeline
+graph_builder = GraphBuilder(retriever, llm)
+graph = graph_builder.build()
+result_graph = graph_builder.run("Explain RAG with LangGraph.")
+print("Graph answer:", result_graph.answer)
 ```
 
 ---
