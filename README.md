@@ -30,6 +30,9 @@ This repository implements a lightweight retrieval-augmented generation (RAG) sy
 7. **Persistence**
    Vector stores can be saved locally to enable repeated querying without reprocessing the entire corpus.
 
+8. **Configuration**
+   The `src/config/config.py` file centralizes application configuration. It uses environment variables (via `.env`) to manage sensitive keys like `OPENAI_API_KEY`. It also defines default model settings, chunking parameters, and fallback URLs. The `Config.get_llm()` method returns a ready-to-use `ChatOpenAI` instance, ensuring consistent model usage across pipelines.
+
 ---
 
 ## Project Structure
@@ -39,6 +42,7 @@ ProjectRAG/
 ├── data/                   # Input sources (e.g. url.txt)
 ├── src/
 │   ├── config/             # Application configuration
+│   │   └── config.py       # LLM model, chunk settings, default URLs
 │   ├── document_ingestion/ # Document loading and preprocessing
 │   ├── graph_builder/      # Graph-based pipelines (LangGraph)
 │   ├── nodes/              # RAG nodes: SimpleRAGNodes and ReActNode
@@ -109,17 +113,24 @@ streamlit run streamlit_app.py
 5. **Frontend interaction**
    The Streamlit interface allows interactive exploration. Users can upload new data sources, trigger ingestion, build vector stores, and query the system. Results are displayed alongside the retrieved context.
 
+6. **Configuration management**
+   Instead of hardcoding values, all sensitive and repetitive configurations are handled via `Config`. This ensures clean separation of logic and environment variables, while making model parameters (e.g., `CHUNK_SIZE`, `CHUNK_OVERLAP`, `LLM_MODEL`) easy to adjust.
+
 ---
 
 ## Example Usage in Code
 
 ```python
+from src.config.config import Config
 from src.document_ingestion.document_processor import DocumentProcessor
 from src.vector_store.vector_store import VectorStore
 from src.nodes.nodes import SimpleRAGNodes
 from src.nodes.react_node import RAGNodes
 from src.state.rag_state import RAGState
 from src.graph_builder.graph_builder import GraphBuilder
+
+# Load model from config
+llm = Config.get_llm()
 
 # Ingest documents
 processor = DocumentProcessor()
@@ -162,6 +173,7 @@ Core libraries:
 * streamlit
 * openai
 * pypdf, beautifulsoup4
+* python-dotenv
 
 A complete list is provided in [requirements.txt](requirements.txt).
 
