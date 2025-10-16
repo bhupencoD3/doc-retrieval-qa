@@ -1,124 +1,128 @@
 # Document Retrieval Question Answering (RAG with LangChain and LangGraph)
 
-This repository implements a lightweight retrieval-augmented generation (RAG) system. The application is designed to support document ingestion from heterogeneous sources, embed and store the processed data in a vector database, and enable retrieval-based question answering through integration with large language models (LLMs). The system is accessible via a Streamlit interface and demonstrates both simple and agentic approaches to RAG using LangChain and LangGraph.
+This repository implements a lightweight retrieval-augmented generation (RAG) system. The application supports document ingestion from multiple sources, embeds and stores processed text in a **FAISS** vector database, and performs retrieval-based question answering using large language models (LLMs). It includes a **Streamlit** interface and demonstrates both simple and agentic RAG approaches with LangChain and LangGraph.
 
 ---
 
-## System Capabilities
+## **System Capabilities**
 
-1. **Document ingestion**
-   The system can process multiple types of input, including web URLs, directories of PDF files, and plain text documents. Documents are preprocessed and chunked to improve retrieval granularity.
+1. **Document Ingestion**
+   Supports input from web URLs, directories of PDFs, and text documents. Data is preprocessed and chunked to enhance retrieval.
 
-2. **Vector storage and retrieval**
-   Text chunks are embedded using OpenAI’s `text-embedding-3-small` model and stored in a FAISS vector database. FAISS provides efficient approximate nearest neighbor (ANN) search for scalable retrieval.
+2. **Vector Storage and Retrieval**
+   Uses OpenAI’s `text-embedding-3-small` model for embeddings and stores vectors in a **FAISS** database for efficient nearest neighbor search.
 
-3. **Retrieval pipelines**
-   Two complementary approaches are implemented:
+3. **Retrieval Pipelines**
 
-   * **SimpleRAGNodes**: A direct pipeline where retrieved chunks are concatenated with the user’s query and passed to an LLM for answer synthesis.
-   * **ReActNode**: A hybrid pipeline that first attempts retrieval from the local vector store and, in cases where the local documents provide insufficient evidence, falls back to an external knowledge source (Wikipedia). The Wikipedia integration is mediated by a ReAct-style agent built with LangGraph, allowing iterative reasoning and tool use.
+   * **SimpleRAGNodes**: Directly concatenates retrieved chunks with user queries and sends them to an LLM for synthesis.
+   * **ReActNode**: Combines local retrieval with a fallback Wikipedia agent (using LangGraph) for external reasoning.
 
-4. **Graph-based pipeline (LangGraph)**
-   The repository includes a `GraphBuilder` that constructs a **LangGraph StateGraph** pipeline. This allows modular definition of retrieval and response generation nodes with explicit state management.
+4. **Graph-Based Pipeline (LangGraph)**
+   The `GraphBuilder` constructs a **LangGraph StateGraph** that defines retrieval and generation nodes with explicit state handling.
 
 5. **Summarization**
-   To prevent verbose outputs, both pipelines incorporate summarization prompts that constrain the generated response to two or three sentences that directly answer the query.
+   Summarizes responses into concise, two-to-three-sentence answers.
 
-6. **Frontend**
-   A Streamlit-based application provides an interface for uploading documents, managing vector stores, and posing natural language queries.
+6. **Frontend (Streamlit)**
+   A web interface for document uploads, vector store management, and natural language querying.
 
 7. **Persistence**
-   Vector stores can be saved locally to enable repeated querying without reprocessing the entire corpus.
+   FAISS indexes are saved locally for reuse without reprocessing.
 
 8. **Configuration**
-   The `src/config/config.py` file centralizes application configuration. It uses environment variables (via `.env`) to manage sensitive keys like `OPENAI_API_KEY`. It also defines default model settings, chunking parameters, and fallback URLs. The `Config.get_llm()` method returns a ready-to-use `ChatOpenAI` instance, ensuring consistent model usage across pipelines.
+   Centralized in `src/config/config.py`, which loads environment variables (e.g., `OPENAI_API_KEY`) and manages chunk size, model, and retrieval settings.
 
 ---
 
-## Project Structure
+## **Project Structure**
 
 ```
 ProjectRAG/
-├── data/                   # Input sources (e.g. url.txt)
+├── data/
 ├── src/
-│   ├── config/             # Application configuration
-│   │   └── config.py       # LLM model, chunk settings, default URLs
-│   ├── document_ingestion/ # Document loading and preprocessing
-│   ├── graph_builder/      # Graph-based pipelines (LangGraph)
-│   ├── nodes/              # RAG nodes: SimpleRAGNodes and ReActNode
-│   ├── state/              # Shared state definitions
-│   └── vector_store/       # FAISS vector store utilities
-├── streamlit_app.py        # Main Streamlit application
-├── test_app.py             # Experimental scripts and prototyping
-├── vectorstore/            # Persisted FAISS indexes
-├── requirements.txt        # Python dependencies
+│   ├── config/
+│   │   └── config.py
+│   ├── document_ingestion/
+│   ├── graph_builder/
+│   ├── nodes/
+│   ├── state/
+│   └── vector_store/
+├── streamlit_app.py
+├── test_app.py
+├── vectorstore/
+├── requirements.txt
 └── README.md
 ```
 
 ---
 
-## Installation and Setup
+## **Installation and Setup**
 
 1. Clone the repository:
 
-```bash
-git clone https://github.com/bhupencoD3/doc-retrieval-qa.git
-cd doc-retrieval-qa
-```
+   ```bash
+   git clone https://github.com/bhupencoD3/doc-retrieval-qa.git
+   cd doc-retrieval-qa
+   ```
 
-2. Create and activate a Python environment (example with Conda):
+2. Create and activate a virtual environment:
 
-```bash
-conda create -n rag_app python=3.11 -y
-conda activate rag_app
-```
+   ```bash
+   conda create -n rag_app python=3.11 -y
+   conda activate rag_app
+   ```
 
-3. Install the dependencies:
+3. Install dependencies:
 
-```bash
-pip install -r requirements.txt
-```
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-4. Configure the OpenAI API key by creating a `.env` file in the project root:
+4. Set up your environment:
 
-```
-OPENAI_API_KEY=your_api_key_here
-```
+   ```bash
+   echo "OPENAI_API_KEY=your_api_key_here" > .env
+   ```
 
-5. Launch the Streamlit interface:
+5. Launch the Streamlit app:
 
-```bash
-streamlit run streamlit_app.py
-```
-
----
-
-## Internal Workflows
-
-1. **Document ingestion**
-   The `DocumentProcessor` class orchestrates the ingestion of documents. After loading, the content is segmented into smaller units using recursive text splitting. This ensures that embedding captures semantically coherent chunks while remaining sufficiently fine-grained for retrieval.
-
-2. **Vector store construction**
-   The `VectorStore` class manages embeddings and storage. Documents are embedded with OpenAI models, and FAISS is used for efficient retrieval. The retriever interface abstracts vector similarity search and exposes methods to retrieve the top-k relevant chunks for a query.
-
-3. **Answer generation**
-
-   * In **SimpleRAGNodes**, retrieved chunks are combined with the query into a prompt. The LLM then produces an answer grounded in the local corpus.
-   * In **ReActNode**, the system first attempts the same retrieval. If relevant documents are available, they are summarized. If not, a ReAct agent is constructed with access to a Wikipedia search tool. This agent performs tool-augmented reasoning and generates an answer by combining reasoning steps and external content.
-   * In **GraphBuilder**, a LangGraph `StateGraph` is defined. The graph includes nodes like `responder`, where the retrieval and response generation happen, with explicit entry and exit points.
-
-4. **Summarization**
-   Both nodes employ summarization prompts, ensuring responses are concise and directly address the user’s question. If retrieved or external content exceeds a length threshold, an additional summarization pass is invoked.
-
-5. **Frontend interaction**
-   The Streamlit interface allows interactive exploration. Users can upload new data sources, trigger ingestion, build vector stores, and query the system. Results are displayed alongside the retrieved context.
-
-6. **Configuration management**
-   Instead of hardcoding values, all sensitive and repetitive configurations are handled via `Config`. This ensures clean separation of logic and environment variables, while making model parameters (e.g., `CHUNK_SIZE`, `CHUNK_OVERLAP`, `LLM_MODEL`) easy to adjust.
+   ```bash
+   streamlit run streamlit_app.py
+   ```
 
 ---
 
-## Example Usage in Code
+## **Internal Workflows**
+
+### **1. Document Ingestion**
+
+The `DocumentProcessor` loads and preprocesses data, splitting it into coherent text chunks for embedding.
+
+### **2. Vector Store Construction**
+
+`VectorStore` manages embeddings and retrieval using FAISS. It supports top-k similarity search and persistent storage.
+
+### **3. Answer Generation**
+
+* **SimpleRAGNodes**: Combines query + retrieved chunks → LLM → summarized output.
+* **ReActNode**: If local retrieval fails, a Wikipedia-powered ReAct agent (via LangGraph) is used.
+* **GraphBuilder**: Defines a modular graph with nodes for retrieval and generation, enabling composable pipelines.
+
+### **4. Summarization**
+
+Keeps answers short and relevant using summarization prompts.
+
+### **5. Frontend Interaction**
+
+Streamlit UI for document ingestion, query answering, and displaying retrieved context.
+
+### **6. Configuration Management**
+
+Environment-driven configuration via `Config`. Adjusts chunk sizes, models, and retrieval parameters.
+
+---
+
+## **Example Usage**
 
 ```python
 from src.config.config import Config
@@ -129,65 +133,49 @@ from src.nodes.react_node import RAGNodes
 from src.state.rag_state import RAGState
 from src.graph_builder.graph_builder import GraphBuilder
 
-# Load model from config
 llm = Config.get_llm()
-
-# Ingest documents
 processor = DocumentProcessor()
 docs = processor.process_sources(["data/url.txt"])
 
-# Build vector store
 vs = VectorStore()
 vs.create_vectorstore(docs)
 retriever = vs.get_retriever()
 
-# Simple pipeline
 simple_nodes = SimpleRAGNodes(retriever, llm)
 state = RAGState(question="What is LangGraph?")
 result_simple = simple_nodes.generate_answer(state)
-print("SimpleRAG answer:", result_simple["answer"])
+print(result_simple["answer"])
 
-# ReAct pipeline
 react_nodes = RAGNodes(retriever, llm)
-result_react = react_nodes.generate_answer(state)
-print("ReAct answer:", result_react["answer"])
+print(react_nodes.generate_answer(state)["answer"])
 
-# Graph pipeline
 graph_builder = GraphBuilder(retriever, llm)
 graph = graph_builder.build()
-result_graph = graph_builder.run("Explain RAG with LangGraph.")
-print("Graph answer:", result_graph.answer)
+print(graph_builder.run("Explain RAG with LangGraph.").answer)
 ```
 
 ---
 
-## Requirements
+## **Requirements**
 
-* Python 3.9 or higher
+* Python 3.9+
 * OpenAI API key
 
 Core libraries:
 
-* langchain, langgraph
+* langchain
+* langgraph
 * faiss-cpu
 * streamlit
 * openai
-* pypdf, beautifulsoup4
+* pypdf
+* beautifulsoup4
 * python-dotenv
 
-A complete list is provided in [requirements.txt](requirements.txt).
-
 ---
 
-## Future Work
+## **License**
 
-* Extend the ReAct pipeline into a multi-node LangGraph graph, enabling more complex reasoning chains beyond a single retrieval or fallback.
-* Incorporate additional file formats (e.g., Word documents, Markdown).
-* Replace the basic Streamlit interface with a more advanced conversational UI supporting multi-turn dialogue.
-* Integrate monitoring and observability tools for model and retrieval performance analysis.
+Released under the MIT License.
 
 ---
-
-## License
-
-This repository is distributed under the MIT License.
